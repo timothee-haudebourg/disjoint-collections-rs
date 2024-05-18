@@ -33,18 +33,33 @@ impl<T> DisjointVec<T> {
 		i
 	}
 
-	pub fn get(&self, i: usize) -> Option<(usize, &T)> {
+	pub fn class_of(&self, i: usize) -> Option<usize> {
+		Some(match self.0.get(i)? {
+			Item::Class(_) => i,
+			Item::Indirection(j) => {
+				let k = self.class_of(j.get())?;
+				j.set(k);
+				k
+			}
+		})
+	}
+	
+	pub fn get_with_class(&self, i: usize) -> Option<(usize, &T)> {
 		Some(match self.0.get(i)? {
 			Item::Class(t) => (i, t),
 			Item::Indirection(j) => {
-				let (k, t) = self.get(j.get())?;
+				let (k, t) = self.get_with_class(j.get())?;
 				j.set(k);
 				(k, t)
 			}
 		})
 	}
 
-	pub fn get_mut(&mut self, mut i: usize) -> Option<(usize, &mut T)> {
+	pub fn get(&self, i: usize) -> Option<&T> {
+		self.get_with_class(i).map(|(_, v)| v)
+	}
+
+	pub fn get_mut_with_class(&mut self, mut i: usize) -> Option<(usize, &mut T)> {
 		loop {
 			match self.0.get(i)? {
 				Item::Class(_) => {
@@ -55,9 +70,13 @@ impl<T> DisjointVec<T> {
 		}
 	}
 
+	pub fn get_mut(&mut self, i: usize) -> Option<&mut T> {
+		self.get_mut_with_class(i).map(|(_, v)| v)
+	}
+
 	pub fn merge(&mut self, a: usize, b: usize, f: impl FnOnce(T, T) -> T) -> Option<usize> {
-		if let Some((mut ac, _)) = self.get(a) {
-			if let Some((mut bc, _)) = self.get(b) {
+		if let Some(mut ac) = self.class_of(a) {
+			if let Some(mut bc) = self.class_of(b) {
 				if ac == bc {
 					return Some(ac);
 				} else {
@@ -89,8 +108,8 @@ impl<T> DisjointVec<T> {
 		b: usize,
 		f: impl FnOnce(T, T) -> Result<T, E>,
 	) -> Result<Option<usize>, E> {
-		if let Some((mut ac, _)) = self.get(a) {
-			if let Some((mut bc, _)) = self.get(b) {
+		if let Some(mut ac) = self.class_of(a) {
+			if let Some(mut bc) = self.class_of(b) {
 				if ac == bc {
 					return Ok(Some(ac));
 				} else {

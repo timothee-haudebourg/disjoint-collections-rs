@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, collections::HashMap, hash::Hash};
 
-use crate::{vec::IntoClasses, DisjointVec};
+use crate::{vec::{Classes, IntoClasses}, DisjointVec};
 
 pub struct DisjointHashMap<K, V> {
 	keys: HashMap<K, usize>,
@@ -37,7 +37,11 @@ impl<K: Eq + Hash, V> DisjointHashMap<K, V> {
 		i
 	}
 
-	fn index_of<Q>(&self, key: &Q) -> Option<usize>
+	pub fn as_vec(&self) -> &DisjointVec<V> {
+		&self.inner
+	}
+
+	pub fn index_of<Q>(&self, key: &Q) -> Option<usize>
 	where
 		Q: ?Sized + Eq + Hash,
 		K: Borrow<Q>,
@@ -45,7 +49,25 @@ impl<K: Eq + Hash, V> DisjointHashMap<K, V> {
 		self.keys.get(key).copied()
 	}
 
-	pub fn class_of<Q>(&self, key: &Q) -> Option<(usize, &V)>
+	pub fn class_of<Q>(&self, key: &Q) -> Option<usize>
+	where
+		Q: ?Sized + Eq + Hash,
+		K: Borrow<Q>,
+	{
+		let i = self.index_of(key)?;
+		self.inner.class_of(i)
+	}
+
+	pub fn get_with_class<Q>(&self, key: &Q) -> Option<(usize, &V)>
+	where
+		Q: ?Sized + Eq + Hash,
+		K: Borrow<Q>,
+	{
+		let i = self.index_of(key)?;
+		self.inner.get_with_class(i)
+	}
+
+	pub fn get<Q>(&self, key: &Q) -> Option<&V>
 	where
 		Q: ?Sized + Eq + Hash,
 		K: Borrow<Q>,
@@ -66,6 +88,10 @@ impl<K: Eq + Hash, V> DisjointHashMap<K, V> {
 		}
 
 		None
+	}
+
+	pub fn classes(&self) -> Classes<V> {
+		self.inner.classes()
 	}
 
 	pub fn into_classes(self) -> IntoClasses<V> {
