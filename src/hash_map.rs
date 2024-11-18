@@ -2,6 +2,7 @@ use std::{borrow::Borrow, collections::HashMap, hash::Hash};
 
 use crate::{vec::{Classes, IntoClasses}, DisjointVec};
 
+#[derive(Debug)]
 pub struct DisjointHashMap<K, V> {
 	keys: HashMap<K, usize>,
 	inner: DisjointVec<V>,
@@ -76,6 +77,17 @@ impl<K: Eq + Hash, V> DisjointHashMap<K, V> {
 		self.inner.get(i)
 	}
 
+	pub fn replace<Q>(&mut self, key: &Q, value: V) -> Result<V, V>
+	where
+		Q: ?Sized + Eq + Hash,
+		K: Borrow<Q>,
+	{
+		match self.index_of(key) {
+			Some(i) => self.inner.replace(i, value),
+			None => Err(value)
+		}
+	}
+
 	pub fn merge<Q>(&mut self, a: &Q, b: &Q, f: impl FnOnce(V, V) -> V) -> Option<usize>
 	where
 		Q: ?Sized + Eq + Hash,
@@ -88,6 +100,20 @@ impl<K: Eq + Hash, V> DisjointHashMap<K, V> {
 		}
 
 		None
+	}
+
+	pub fn try_merge<Q, E>(&mut self, a: &Q, b: &Q, f: impl FnOnce(V, V) -> Result<V, E>) -> Result<Option<usize>, E>
+	where
+		Q: ?Sized + Eq + Hash,
+		K: Borrow<Q>,
+	{
+		if let Some(a) = self.index_of(a) {
+			if let Some(b) = self.index_of(b) {
+				return self.inner.try_merge(a, b, f);
+			}
+		}
+
+		Ok(None)
 	}
 
 	pub fn classes(&self) -> Classes<V> {

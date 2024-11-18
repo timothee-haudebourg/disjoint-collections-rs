@@ -74,6 +74,13 @@ impl<T> DisjointVec<T> {
 		self.get_mut_with_class(i).map(|(_, v)| v)
 	}
 
+	pub fn replace(&mut self, i: usize, value: T) -> Result<T, T> {
+		match self.get_mut(i) {
+			Some(current_value) => Ok(std::mem::replace(current_value, value)),
+			None => Err(value)
+		}
+	}
+
 	pub fn merge(&mut self, a: usize, b: usize, f: impl FnOnce(T, T) -> T) -> Option<usize> {
 		if let Some(mut ac) = self.class_of(a) {
 			if let Some(mut bc) = self.class_of(b) {
@@ -141,12 +148,30 @@ impl<T> DisjointVec<T> {
 		Ok(None)
 	}
 
+	pub fn map<U>(self, mut f: impl FnMut(T) -> U) -> DisjointVec<U> {
+		DisjointVec(self.0.into_iter().map(|item| item.map(&mut f)).collect())
+	}
+
 	pub fn classes(&self) -> Classes<T> {
 		Classes(self.0.iter().enumerate())
 	}
 
 	pub fn into_classes(self) -> IntoClasses<T> {
 		IntoClasses(self.0.into_iter().enumerate())
+	}
+}
+
+impl<T> Extend<T> for DisjointVec<T> {
+	fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
+		self.0.extend(iter.into_iter().map(Item::Class));
+	}
+}
+
+impl<T> FromIterator<T> for DisjointVec<T> {
+	fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+		let mut result = Self::default();
+		result.extend(iter);
+		result
 	}
 }
 
@@ -168,6 +193,13 @@ impl<T> Item<T> {
 		match self {
 			Self::Class(t) => Some(t),
 			Self::Indirection(_) => None,
+		}
+	}
+
+	pub fn map<U>(self, mut f: impl FnMut(T) -> U) -> Item<U> {
+		match self {
+			Self::Class(t) => Item::Class(f(t)),
+			Self::Indirection(c) => Item::Indirection(c)
 		}
 	}
 }
