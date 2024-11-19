@@ -1,6 +1,6 @@
 use std::cell::Cell;
 
-/// Union find.
+/// Disjoint array based on [`Vec`].
 #[derive(Debug, Clone)]
 pub struct DisjointVec<T>(Vec<Item<T>>);
 
@@ -43,7 +43,7 @@ impl<T> DisjointVec<T> {
 			}
 		})
 	}
-	
+
 	pub fn get_with_class(&self, i: usize) -> Option<(usize, &T)> {
 		Some(match self.0.get(i)? {
 			Item::Class(t) => (i, t),
@@ -77,7 +77,7 @@ impl<T> DisjointVec<T> {
 	pub fn replace(&mut self, i: usize, value: T) -> Result<T, T> {
 		match self.get_mut(i) {
 			Some(current_value) => Ok(std::mem::replace(current_value, value)),
-			None => Err(value)
+			None => Err(value),
 		}
 	}
 
@@ -199,7 +199,7 @@ impl<T> Item<T> {
 	pub fn map<U>(self, mut f: impl FnMut(T) -> U) -> Item<U> {
 		match self {
 			Self::Class(t) => Item::Class(f(t)),
-			Self::Indirection(c) => Item::Indirection(c)
+			Self::Indirection(c) => Item::Indirection(c),
 		}
 	}
 }

@@ -1,7 +1,11 @@
 use std::{borrow::Borrow, collections::HashMap, hash::Hash};
 
-use crate::{vec::{Classes, IntoClasses}, DisjointVec};
+use crate::{
+	vec::{Classes, IntoClasses},
+	DisjointVec,
+};
 
+/// Disjoint map based on [`HashMap`].
 #[derive(Debug)]
 pub struct DisjointHashMap<K, V> {
 	keys: HashMap<K, usize>,
@@ -84,7 +88,7 @@ impl<K: Eq + Hash, V> DisjointHashMap<K, V> {
 	{
 		match self.index_of(key) {
 			Some(i) => self.inner.replace(i, value),
-			None => Err(value)
+			None => Err(value),
 		}
 	}
 
@@ -102,7 +106,12 @@ impl<K: Eq + Hash, V> DisjointHashMap<K, V> {
 		None
 	}
 
-	pub fn try_merge<Q, E>(&mut self, a: &Q, b: &Q, f: impl FnOnce(V, V) -> Result<V, E>) -> Result<Option<usize>, E>
+	pub fn try_merge<Q, E>(
+		&mut self,
+		a: &Q,
+		b: &Q,
+		f: impl FnOnce(V, V) -> Result<V, E>,
+	) -> Result<Option<usize>, E>
 	where
 		Q: ?Sized + Eq + Hash,
 		K: Borrow<Q>,
